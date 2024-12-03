@@ -1,8 +1,8 @@
 from sqlalchemy.ext.automap import automap_base
-from sqlalchemy import create_engine,inspect,func
+from sqlalchemy import create_engine,inspect,func,desc
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Table, MetaData
-
+import pandas as pd
 db_urls = {
         'ubereats': 'sqlite:///databases/ubereats.db',
         'deliveroo': 'sqlite:///databases/deliveroo.db',
@@ -32,7 +32,7 @@ class DataBaseManager():
                 case 'ubereats':
                     metadata = MetaData()
                     for tabel in tabel_list:
-                        self.db_data[db_name]['tables'][tabel] =   Table(f'{tabel}', metadata, autoload_with=engine).c
+                        self.db_data[db_name]['tables'][tabel] =   Table(f'{tabel}', metadata, autoload_with=engine)
                 case _:
                     base_tabel_list = Base.classes.keys()
                     for tabel in base_tabel_list:
@@ -40,7 +40,7 @@ class DataBaseManager():
                     metadata = MetaData()
                     many_to_many_list = [x for x in tabel_list if x not in base_tabel_list]
                     for tabel in many_to_many_list:
-                        self.db_data[db_name]['tables'][tabel] = Table(f'{tabel}',metadata,autoload_with=engine).c
+                        self.db_data[db_name]['tables'][tabel] = Table(f'{tabel}',metadata,autoload_with=engine)
 
     def get_session(self,db_name):
         return self.db_data[db_name]['session']
@@ -49,14 +49,48 @@ class DataBaseManager():
         return self.db_data[db_name]['tables']
     
 
-    def query_execution_example(self,db_name):
+    def rest_per_loc_query(self,db_name = 'ubereats'):
         session = self.get_session(db_name)
         tables = self.get_tables(db_name)
-        restaurants = tables['restaurants']
-        query = session.query(restaurants.title)
+        locations = tables['locations']
+        locations_to_restaurants = tables['locations_to_restaurants']
+        match db_name:
+            case 'ubereats':
+                query = session.query(
+                    locations.c.id.label('id'),
+                    locations.c.name.label('location_name'),
+                    locations.c.latitude.label('lat'),
+                    locations.c.longitude.label('lon'),
+                    func.count(locations_to_restaurants.c.restaurant_id).label('restaurant_count')).outerjoin(locations_to_restaurants,locations.c.id == locations_to_restaurants.c.location_id).group_by(locations.c.id).order_by(desc('restaurant_count'))
+            case 'takeaway':
+                query = session.query(
+                    locations.ID.label('id'),
+                    locations.name.label('location_name'),
+                    locations.latitude.label('lat'),
+                    locations.longitude.label('lon'),
+                    func.count(locations_to_restaurants.c.restaurant_id).label('restaurant_count')).outerjoin(locations_to_restaurants,locations.ID == locations_to_restaurants.c.location_id).group_by(locations.ID).order_by(desc('restaurant_count'))
+            case 'deliveroo':
+                query = session.query(
+                    locations.id.label('id'),
+                    locations.name.label('location_name'),
+                    locations.latitude.label('lat'),
+                    locations.longitude.label('lon'),
+                    func.count(locations_to_restaurants.c.restaurant_id).label('restaurant_count')).outerjoin(locations_to_restaurants,locations.id == locations_to_restaurants.c.location_id).group_by(locations.id).order_by(desc('restaurant_count'))
         res = query.all()
+        df = pd.DataFrame(res,columns=['id','name','lat','lon','rest_count'])
         session.close()
-        return res
+        return df
+    
+    def create_df_for_all_db_rpl(self):
+        df_dict = {}
+        df_dict['ubereats'] = self.rest_per_loc_query().head()
+        df_dict['takeaway'] = self.rest_per_loc_query(db_name='takeaway').head()
+        df_dict['deliveroo'] = self.rest_per_loc_query(db_name='deliveroo').head()
+        return df_dict
+    
+
+
+    
 
         
     
@@ -64,9 +98,4 @@ class DataBaseManager():
 
 
 
-manager = DataBaseManager(db_urls=db_urls)
-# print(manager.db_data)
-
-for row in manager.query_execution_example('ubereats'):
-    print(row[0])
 
