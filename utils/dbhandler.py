@@ -81,6 +81,10 @@ class DataBaseManager():
         session.close()
         return df
     
+
+
+
+
     def create_df_for_all_db_rpl(self):
         df_dict = {}
         df_dict['ubereats'] = self.rest_per_loc_query().head()
@@ -88,13 +92,45 @@ class DataBaseManager():
         df_dict['deliveroo'] = self.rest_per_loc_query(db_name='deliveroo').head()
         return df_dict
     
+    def query_prices_per_db(self, db_name='ubereats'):
+        session = self.get_session(db_name)
+        tables = self.get_tables(db_name)
+        match db_name:
+            case 'ubereats':
+                menu_items = tables['menu_items']
+                query = session.query(menu_items.c.price)
+            case 'takeaway':
+                menu_items = tables['menuItems']
+                query = session.query(menu_items.price)
+            case 'deliveroo':
+                menu_items = tables['menu_items']
+                query = session.query(menu_items.price)
+            case _:
+                raise ValueError(f"Unsupported database: {db_name}")
+        
+        prices = [row.price for row in query.all()]
+        session.close()
+        return prices
 
+    def create_prices_df_for_all_db(self):
+        prices_dict = {}
+        prices_dict['ubereats'] = self.query_prices_per_db(db_name='ubereats')
+        prices_dict['takeaway'] = self.query_prices_per_db(db_name='takeaway')
+        prices_dict['deliveroo'] = self.query_prices_per_db(db_name='deliveroo')
+        
+        prices_df = pd.DataFrame({key: pd.Series(value) for key, value in prices_dict.items()})
+        return prices_df
+    
+    def save_prices_to_csv(self, file_name='prices.csv'):
+        df = self.create_prices_df_for_all_db()
+        df.to_csv(file_name, index=False)
+        print(f"Prices saved to {file_name}")
 
     
+
 
         
     
-
 
 
 
