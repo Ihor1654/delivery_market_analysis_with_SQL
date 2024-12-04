@@ -155,7 +155,41 @@ class DataBaseManager():
     
 
 
+    def get_kapsalons(self,db_name):
+        session = self.get_session(db_name)
+        tables = self.get_tables(db_name)
+        restaurants = tables['restaurants']
+        locations = tables['locations']
+        locations_to_restaurants = tables['locations_to_restaurants']
+        match db_name:
+            case 'ubereats':
+                menu_item = tables['menu_items']
+                query = session.query(
+                    restaurants.c.title.label('restaurant_name'),
+            (func.avg(menu_item.c.price) / 100).label('avg_price'),  
+            func.min(locations.c.latitude).label('latitude'),
+            func.min(locations.c.longitude).label('longitude')
+        ).select_from(menu_item). \
+            join(restaurants, restaurants.c.id == menu_item.c.restaurant_id). \
+            join(locations_to_restaurants, locations_to_restaurants.c.restaurant_id == restaurants.c.id). \
+            join(locations, locations.c.id == locations_to_restaurants.c.location_id). \
+            filter(menu_item.c.name.like('%kapsalon%')). \
+            group_by(restaurants.c.title)
+            case 'takeaway':
+                rest_categories = tables['categories_restaurants']
+                query = session.query()
+            case 'deliveroo':
+               query = session.query()
         
+        
+        res = query.all()
+        for row in res:
+            print(f' name: {row.restaurant_name} avg_pr: {row.avg_price} lat: {row.latitude}')
+        df = pd.DataFrame(res,columns=['name','avg_pr','latitude','longitude'])
+        session.close()
+        return df
+
+  
     
 
 
