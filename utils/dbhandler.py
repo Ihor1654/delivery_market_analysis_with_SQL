@@ -215,7 +215,7 @@ class DataBaseManager():
         kapsalons_dict['takeaway'] = self.get_kapsalons(db_name='takeaway')
         kapsalons_dict['deliveroo'] = self.get_kapsalons(db_name='deliveroo')
         
-        kapsalons_df = pd.DataFrame({key: pd.Series(value) for key, value in prices_dict.items()})
+        kapsalons_df = pd.DataFrame({key: pd.Series(value) for key, value in kapsalons_dict.items()})
         return kapsalons_df
     
     def save_kapsalons_to_csv(self, file_name='kapsalons.csv'):
