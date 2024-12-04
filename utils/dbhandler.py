@@ -101,9 +101,12 @@ class DataBaseManager():
                    restaurants.id,
                    restaurants.name,
                    restaurants.rating,
-                   restaurants.rating_number.label('review_count')
+                  func.cast(
+                    func.replace(restaurants.rating_number, '+', ''),
+                    Integer
+                ).label('review_count')
                    ).where( 
-                       cast(restaurants.rating_number, Integer) > 0,  
+                       cast(restaurants.rating_number, Integer) > 100,  
                        restaurants.category == 'Pizza' 
                        ).order_by(
                            desc(restaurants.rating),
@@ -117,7 +120,7 @@ class DataBaseManager():
 
   
 
-sss
+
     def create_df_for_all_db_rpl(self):
         df_dict = {}
         df_dict['ubereats'] = self.rest_per_loc_query().head()
