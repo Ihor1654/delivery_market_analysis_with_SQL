@@ -208,6 +208,20 @@ class DataBaseManager():
         df = pd.DataFrame(res,columns=['name','avg_pr','latitude','longitude'])
         session.close()
         return df
+    
+    def create_kapsalons_df_for_all_db(self):
+        kapsalons_dict = {}
+        kapsalons_dict['ubereats'] = self.get_kapsalons(db_name='ubereats')
+        kapsalons_dict['takeaway'] = self.get_kapsalons(db_name='takeaway')
+        kapsalons_dict['deliveroo'] = self.get_kapsalons(db_name='deliveroo')
+        
+        kapsalons_df = pd.DataFrame({key: pd.Series(value) for key, value in prices_dict.items()})
+        return kapsalons_df
+    
+    def save_kapsalons_to_csv(self, file_name='kapsalons.csv'):
+        df = self.create_kapsalons_df_for_all_db()
+        df.to_csv(file_name, index=False)
+        print(f"Kapsalons saved to {file_name}")
 
   
     
