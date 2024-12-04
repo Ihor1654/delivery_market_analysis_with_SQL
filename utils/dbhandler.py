@@ -3,7 +3,7 @@ from sqlalchemy import create_engine,inspect,func,desc, cast,distinct, not_
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
 
-from  import Table, MetaData, String, Integer
+from sqlalchemy import Table, MetaData, String, Integer
 import pandas as pd
 db_urls = {
         'ubereats': 'sqlite:///databases/ubereats.db',
@@ -102,10 +102,8 @@ class DataBaseManager():
                    restaurants.name,
                    restaurants.rating,
                    restaurants.rating_number.label('review_count')
-                   ).where(
-                       restaurants.rating_number.is_not(None),  # Исключаем None
-                       text("restaurants.rating_number NOT LIKE 'NaN'"),  # Исключаем строку 'NaN'
-                       cast(restaurants.rating_number, Integer) > 0,  # Проверяем, что рейтинг положительный
+                   ).where( 
+                       cast(restaurants.rating_number, Integer) > 0,  
                        restaurants.category == 'Pizza' 
                        ).order_by(
                            desc(restaurants.rating),
@@ -119,7 +117,7 @@ class DataBaseManager():
 
   
 
-
+sss
     def create_df_for_all_db_rpl(self):
         df_dict = {}
         df_dict['ubereats'] = self.rest_per_loc_query().head()
