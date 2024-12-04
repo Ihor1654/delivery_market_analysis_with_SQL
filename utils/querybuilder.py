@@ -175,3 +175,5 @@ Question 4 query functions
 # df = pd.DataFrame(merged_results)
 # df = df.drop_duplicates()
 # print(df)
+
+lol
