@@ -1,7 +1,7 @@
 from sqlalchemy.ext.automap import automap_base
-from sqlalchemy import create_engine,inspect,func,desc
+from sqlalchemy import create_engine,inspect,func,desc, cast,distinct
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Table, MetaData
+from sqlalchemy import Table, MetaData, String, Integer
 import pandas as pd
 db_urls = {
         'ubereats': 'sqlite:///databases/ubereats.db',
@@ -20,7 +20,7 @@ class DataBaseManager():
         self.db_urls = db_urls
         for db_name, db_url in db_urls.items():
             self.db_data[db_name] = {'engine': None, 'session': None, 'tables': {}}
-            engine = create_engine(db_url, echo=True)
+            engine = create_engine(db_url, echo=False)
             inspector = inspect(engine)
             self.db_data[db_name]['engine'] = engine
             Session = sessionmaker(bind=engine)
@@ -82,7 +82,33 @@ class DataBaseManager():
         return df
     
 
+    def get_top10_Pizza_restaurants(self,db_name):
+        session = self.get_session(db_name)
+        tables = self.get_tables(db_name)
+        restaurants = tables['restaurants']
+        print(type(restaurants))
+        match db_name:
+            case 'ubereats':
+                restaurant_to_categories = tables['restaurant_to_categories']
+                query = session.query(cast(restaurants.c.id, String).label('id'),restaurants.c.title.label('name'),restaurants.c.rating__rating_value.label('rating'),restaurants.c.rating__review_count.label('review_count') ).outerjoin(restaurant_to_categories,restaurants.c.id == restaurant_to_categories.c.restaurant_id).where(restaurant_to_categories.c.category == 'Pizza',restaurants.c.rating__review_count>50).order_by(desc('rating')).limit(10)
+            case 'takeaway':
+                rest_categories = tables['categories_restaurants']
+                query = session.query(restaurants.primarySlug.label('id'),restaurants.name,restaurants.ratings.label('rating'),restaurants.ratingsNumber.label('review_count'),).distinct().outerjoin(rest_categories,rest_categories.restaurant_id == restaurants.primarySlug).filter(rest_categories.category_id.like('%pizza%')).where(restaurants.ratingsNumber>50).order_by(desc('rating'),desc('review_count')).limit(10)
+            case 'deliveroo':
+               query = session.query(restaurants.id,
+                      restaurants.name,
+                      restaurants.rating,
+                      restaurants.rating_number.label('review_count')).where(cast(restaurants.rating_number,Integer) > 9,restaurants.category == 'Pizza').order_by(desc(restaurants.rating),desc(restaurants.rating_number)).limit(10)
+        
+        
+        res = query.all()
+        for row in res:
+            print(f'id: {row.id}, title: {row.name}, rating: {row.rating}, review_count: {row.review_count}  ')
+        df = pd.DataFrame(res,columns=['id','name','rating','review_count'])
+        session.close()
+        return df
 
+  
 
 
     def create_df_for_all_db_rpl(self):
@@ -129,7 +155,75 @@ class DataBaseManager():
     
 
 
+    def get_kapsalons(self,db_name):
+        session = self.get_session(db_name)
+        tables = self.get_tables(db_name)
+        restaurants = tables['restaurants']
+        locations = tables['locations']
+        locations_to_restaurants = tables['locations_to_restaurants']
+        match db_name:
+            case 'ubereats':
+                menu_item = tables['menu_items']
+                query = session.query(
+                    restaurants.c.title.label('restaurant_name'),
+                    (func.avg(menu_item.c.price) / 100).label('avg_price'),  
+                    func.min(locations.c.latitude).label('latitude'),
+                    func.min(locations.c.longitude).label('longitude')
+                    ).select_from(menu_item). \
+                    join(restaurants, restaurants.c.id == menu_item.c.restaurant_id). \
+                    join(locations_to_restaurants, locations_to_restaurants.c.restaurant_id == restaurants.c.id). \
+                    join(locations, locations.c.id == locations_to_restaurants.c.location_id). \
+                    filter(menu_item.c.name.like('%kapsalon%')). \
+                    group_by(restaurants.c.title)
+            case 'takeaway':
+                menu_item = tables['menuItems']
+                query = session.query(
+                    restaurants.c.name.label('restaurant_name'),
+                    func.avg(menu_item.c.price).label('avg_price'),  
+                    func.min(locations.c.latitude).label('latitude'),
+                    func.min(locations.c.longitude).label('longitude')
+                    ).select_from(menu_item). \
+                    join(restaurants, restaurants.c.primarySlug == menu_item.c.primarySlug). \
+                    join(locations_to_restaurants, locations_to_restaurants.c.restaurant_id == restaurants.c.primarySlug). \
+                    join(locations, locations.c.ID == locations_to_restaurants.c.location_id). \
+                    filter(menu_item.c.name.like('%kapsalon%')). \
+                    group_by(restaurants.c.name)
+            case 'deliveroo':
+                menu_item = tables['menu_items']
+                query = session.query(restaurants.c.name.label('restaurant_name'),
+                    func.avg(menu_item.c.price).label('avg_price'),  
+                    func.min(locations.c.latitude).label('latitude'),
+                    func.min(locations.c.longitude).label('longitude')
+                    ).select_from(menu_item). \
+                    join(restaurants, restaurants.c.id == menu_item.c.restaurant_id). \
+                    join(locations_to_restaurants, locations_to_restaurants.c.restaurant_id == restaurants.c.id). \
+                    join(locations, locations.c.id == locations_to_restaurants.c.location_id). \
+                    filter(menu_item.c.name.like('%kapsalon%')). \
+                    group_by(restaurants.c.name)
         
+        
+        res = query.all()
+        for row in res:
+            print(f' name: {row.restaurant_name} avg_pr: {row.avg_price} lat: {row.latitude}')
+        df = pd.DataFrame(res,columns=['name','avg_pr','latitude','longitude'])
+        session.close()
+        return df
+    
+    def create_kapsalons_df_for_all_db(self):
+        kapsalons_dict = {}
+        kapsalons_dict['ubereats'] = self.get_kapsalons(db_name='ubereats')
+        kapsalons_dict['takeaway'] = self.get_kapsalons(db_name='takeaway')
+        kapsalons_dict['deliveroo'] = self.get_kapsalons(db_name='deliveroo')
+        
+        kapsalons_df = pd.DataFrame({key: pd.Series(value) for key, value in kapsalons_dict.items()})
+        return kapsalons_df
+    
+    def save_kapsalons_to_csv(self, file_name='kapsalons.csv'):
+        df = self.create_kapsalons_df_for_all_db()
+        df.to_csv(file_name, index=False)
+        print(f"Kapsalons saved to {file_name}")
+
+  
     
 
 
