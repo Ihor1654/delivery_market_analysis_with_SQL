@@ -166,20 +166,40 @@ class DataBaseManager():
                 menu_item = tables['menu_items']
                 query = session.query(
                     restaurants.c.title.label('restaurant_name'),
-            (func.avg(menu_item.c.price) / 100).label('avg_price'),  
-            func.min(locations.c.latitude).label('latitude'),
-            func.min(locations.c.longitude).label('longitude')
-        ).select_from(menu_item). \
-            join(restaurants, restaurants.c.id == menu_item.c.restaurant_id). \
-            join(locations_to_restaurants, locations_to_restaurants.c.restaurant_id == restaurants.c.id). \
-            join(locations, locations.c.id == locations_to_restaurants.c.location_id). \
-            filter(menu_item.c.name.like('%kapsalon%')). \
-            group_by(restaurants.c.title)
+                    (func.avg(menu_item.c.price) / 100).label('avg_price'),  
+                    func.min(locations.c.latitude).label('latitude'),
+                    func.min(locations.c.longitude).label('longitude')
+                    ).select_from(menu_item). \
+                    join(restaurants, restaurants.c.id == menu_item.c.restaurant_id). \
+                    join(locations_to_restaurants, locations_to_restaurants.c.restaurant_id == restaurants.c.id). \
+                    join(locations, locations.c.id == locations_to_restaurants.c.location_id). \
+                    filter(menu_item.c.name.like('%kapsalon%')). \
+                    group_by(restaurants.c.title)
             case 'takeaway':
-                rest_categories = tables['categories_restaurants']
-                query = session.query()
+                menu_item = tables['menuItems']
+                query = session.query(
+                    restaurants.c.name.label('restaurant_name'),
+                    (func.avg(menu_item.c.price) / 100).label('avg_price'),  
+                    func.min(locations.c.latitude).label('latitude'),
+                    func.min(locations.c.longitude).label('longitude')
+                    ).select_from(menu_item). \
+                    join(restaurants, restaurants.c.primarySlug == menu_item.c.primarySlug). \
+                    join(locations_to_restaurants, locations_to_restaurants.c.restaurant_id == restaurants.c.primarySlug). \
+                    join(locations, locations.c.ID == locations_to_restaurants.c.location_id). \
+                    filter(menu_item.c.name.like('%kapsalon%')). \
+                    group_by(restaurants.c.name)
             case 'deliveroo':
-               query = session.query()
+                menu_item = tables['menu_items']
+                query = session.query(restaurants.c.name.label('restaurant_name'),
+                    (func.avg(menu_item.c.price) / 100).label('avg_price'),  
+                    func.min(locations.c.latitude).label('latitude'),
+                    func.min(locations.c.longitude).label('longitude')
+                    ).select_from(menu_item). \
+                    join(restaurants, restaurants.c.id == menu_item.c.restaurant_id). \
+                    join(locations_to_restaurants, locations_to_restaurants.c.restaurant_id == restaurants.c.id). \
+                    join(locations, locations.c.id == locations_to_restaurants.c.location_id). \
+                    filter(menu_item.c.name.like('%kapsalon%')). \
+                    group_by(restaurants.c.name)
         
         
         res = query.all()
