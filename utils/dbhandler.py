@@ -1,7 +1,9 @@
 from sqlalchemy.ext.automap import automap_base
-from sqlalchemy import create_engine,inspect,func,desc, cast,distinct
+from sqlalchemy import create_engine,inspect,func,desc, cast,distinct, not_
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Table, MetaData, String, Integer
+from sqlalchemy.sql import text
+
+from  import Table, MetaData, String, Integer
 import pandas as pd
 db_urls = {
         'ubereats': 'sqlite:///databases/ubereats.db',
@@ -90,20 +92,27 @@ class DataBaseManager():
         match db_name:
             case 'ubereats':
                 restaurant_to_categories = tables['restaurant_to_categories']
-                query = session.query(cast(restaurants.c.id, String).label('id'),restaurants.c.title.label('name'),restaurants.c.rating__rating_value.label('rating'),restaurants.c.rating__review_count.label('review_count') ).outerjoin(restaurant_to_categories,restaurants.c.id == restaurant_to_categories.c.restaurant_id).where(restaurant_to_categories.c.category == 'Pizza',restaurants.c.rating__review_count>50).order_by(desc('rating')).limit(10)
+                query = session.query(cast(restaurants.c.id, String).label('id'),restaurants.c.title.label('name'),restaurants.c.rating__rating_value.label('rating'),restaurants.c.rating__review_count.label('review_count') ).outerjoin(restaurant_to_categories,restaurants.c.id == restaurant_to_categories.c.restaurant_id).where(restaurant_to_categories.c.category == 'Pizza',cast(restaurants.c.rating__review_count,Integer)>35).order_by(desc('rating')).limit(10)
             case 'takeaway':
                 rest_categories = tables['categories_restaurants']
-                query = session.query(restaurants.primarySlug.label('id'),restaurants.name,restaurants.ratings.label('rating'),restaurants.ratingsNumber.label('review_count'),).distinct().outerjoin(rest_categories,rest_categories.restaurant_id == restaurants.primarySlug).filter(rest_categories.category_id.like('%pizza%')).where(restaurants.ratingsNumber>50).order_by(desc('rating'),desc('review_count')).limit(10)
+                query = session.query(restaurants.primarySlug.label('id'),restaurants.name,restaurants.ratings.label('rating'),restaurants.ratingsNumber.label('review_count'),).distinct().outerjoin(rest_categories,rest_categories.restaurant_id == restaurants.primarySlug).filter(rest_categories.category_id.like('%pizza%')).where(cast(restaurants.ratingsNumber,Integer)>700).order_by(desc('rating'),desc('review_count')).limit(10)
             case 'deliveroo':
-               query = session.query(restaurants.id,
-                      restaurants.name,
-                      restaurants.rating,
-                      restaurants.rating_number.label('review_count')).where(cast(restaurants.rating_number,Integer) > 9,restaurants.category == 'Pizza').order_by(desc(restaurants.rating),desc(restaurants.rating_number)).limit(10)
-        
+               query = session.query(
+                   restaurants.id,
+                   restaurants.name,
+                   restaurants.rating,
+                   restaurants.rating_number.label('review_count')
+                   ).where(
+                       restaurants.rating_number.is_not(None),  # Исключаем None
+                       text("restaurants.rating_number NOT LIKE 'NaN'"),  # Исключаем строку 'NaN'
+                       cast(restaurants.rating_number, Integer) > 0,  # Проверяем, что рейтинг положительный
+                       restaurants.category == 'Pizza' 
+                       ).order_by(
+                           desc(restaurants.rating),
+                           desc(restaurants.rating_number)
+                           ).limit(10)
         
         res = query.all()
-        for row in res:
-            print(f'id: {row.id}, title: {row.name}, rating: {row.rating}, review_count: {row.review_count}  ')
         df = pd.DataFrame(res,columns=['id','name','rating','review_count'])
         session.close()
         return df
