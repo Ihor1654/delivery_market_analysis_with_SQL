@@ -179,7 +179,7 @@ class DataBaseManager():
                 menu_item = tables['menuItems']
                 query = session.query(
                     restaurants.c.name.label('restaurant_name'),
-                    (func.avg(menu_item.c.price) / 100).label('avg_price'),  
+                    func.avg(menu_item.c.price).label('avg_price'),  
                     func.min(locations.c.latitude).label('latitude'),
                     func.min(locations.c.longitude).label('longitude')
                     ).select_from(menu_item). \
@@ -191,7 +191,7 @@ class DataBaseManager():
             case 'deliveroo':
                 menu_item = tables['menu_items']
                 query = session.query(restaurants.c.name.label('restaurant_name'),
-                    (func.avg(menu_item.c.price) / 100).label('avg_price'),  
+                    func.avg(menu_item.c.price).label('avg_price'),  
                     func.min(locations.c.latitude).label('latitude'),
                     func.min(locations.c.longitude).label('longitude')
                     ).select_from(menu_item). \
