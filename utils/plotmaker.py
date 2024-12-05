@@ -285,3 +285,4 @@ kapsalon_map_maker.create_kapsalon_map_for_platform('takeaway', output_directory
 kapsalon_map_maker.create_kapsalon_map_for_platform('deliveroo', output_directory="output_maps")
 
 '''
+lol
