@@ -3,7 +3,10 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import contextily as ctx
 import numpy as np
+import plotly.express as px
 import os
+
+
 
 class MapMaker:
     def __init__(self, file_paths, borders_path):
@@ -149,31 +152,37 @@ class MapMaker:
             plt.close()  # Close the plot to avoid it being shown
 
 
-'''
+class PlotMaker():
+    def __init__(self,df,name) -> None:
+        self.df = df
+        self.df_name = name
+    
 
-from plotmaker import MapMaker
+    def change_df(self,df,name):
+        self.df = df
+        self.df_name = name
 
-# Paths to the CSV files containing the data for each platform
-file_paths = {
-    'ubereats': 'data_for_plots\ubereats_data.csv', 
-    'takeaway': 'data_for_plots\takeaway_data.csv', 
-    'deliveroo': 'data_for_plots\deliveroo_data.csv'  
-    }
-
-# Path to the boundaries GeoJSON or shapefile for plotting the region's borders
-borders_path = 'gadm41_BEL_3.shx'  
-
-# Create an instance of the PlotMaker class with the provided file paths and borders file
-plot_maker = PlotMaker(file_paths, borders_path)
-
-# Save the combined map (with all platforms) to the output folder as a JPG file
-plot_maker.create_combined_map(output_file="output_maps/combined_map.jpg")
-
-# Save individual maps for each platform to the "output_maps/" directory
-plot_maker.create_individual_maps(output_directory="output_maps/")
-
-'''
-
+    
+    def create_top_ten_pizza_plot(self,):
+        self.df['review_count'] = pd.to_numeric(self.df['review_count'], errors='coerce')
+        
+        fig = px.scatter(self.df, 
+        x='weight_score', 
+        y='name', 
+        size='review_count',  
+        color='rating',  
+        hover_name='name',  
+        size_max=60,
+        title=f'Top 10 Restaurants by Rating and Review Count ({self.df_name})',
+        labels={'rating': 'Rating', 'name': 'Restaurant', 'review_count': 'Review Count','weight_score':'Adjusted Rating'}
+        )
+        fig.update_layout(
+            xaxis_title='Adjusted ratio',
+            yaxis_title='Restaurant',
+            showlegend=False
+        )
+        fig.update_yaxes(categoryorder='array', categoryarray=self.df['name'][::-1])
+        fig.show()
 
 class KapsalonMapMaker:
     def __init__(self, file_paths):
@@ -285,4 +294,5 @@ kapsalon_map_maker.create_kapsalon_map_for_platform('takeaway', output_directory
 kapsalon_map_maker.create_kapsalon_map_for_platform('deliveroo', output_directory="output_maps")
 
 '''
-lol
+
+
