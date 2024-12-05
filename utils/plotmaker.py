@@ -9,7 +9,7 @@ import os
 
 
 class MapMaker:
-    def __init__(self, file_paths, borders_path):
+    def __init__(self, file_paths):
         """
         Initialize the PlotMaker class with file paths for the data and borders.
 
@@ -18,7 +18,7 @@ class MapMaker:
             borders_path (str): Path to the GeoJSON or shapefile containing region boundaries.
         """
         self.file_paths = file_paths
-        self.borders_path = borders_path
+        self.borders_path = None
         self.platform_colors = {
             'ubereats': 'blue',
             'takeaway': 'green',
@@ -26,7 +26,12 @@ class MapMaker:
         }
         self.df_all = self.load_data()
         self.gdf_all = self.create_geodataframe()
+        self.borders = None
+
+    def set_borders(self,border_path):
+        self.borders_path = border_path
         self.borders = self.load_borders()
+        
 
     def load_data(self):
         """
@@ -43,7 +48,7 @@ class MapMaker:
             dfs.append(df)
 
         df_all = pd.concat(dfs, ignore_index=True)
-        return df_all[df_all['rest_count'] > 0]
+        return df_all
 
     def create_geodataframe(self):
         """
@@ -70,14 +75,66 @@ class MapMaker:
         if borders.crs is None:
             borders.set_crs(epsg=4326, inplace=True)
         return borders.to_crs(epsg=3857)
+    
+    def create_kapsalon_map_for_platform(self, platform_name, output_directory="output_maps"):
+        """
+        Create and save a map for a given platform with color mapping based on 'avg_pr'.
 
-    def create_combined_map(self, output_file=None):
+        Args:
+            platform_name (str): The name of the platform to create a map for.
+            output_directory (str): Directory to save the map .jpg file. Default is 'output_maps'.
+        """
+        gdf_platform = self.gdf_all[self.gdf_all['platform'] == platform_name]
+        self.norm = plt.Normalize(self.gdf_all['avg_pr'].min(), self.gdf_all['avg_pr'].max())
+        self.cmap = plt.cm.cividis  # Color map for visualization
+
+        # Create a plot for better visibility
+        fig, ax = plt.subplots(figsize=(14, 10))
+
+        # Plot the restaurant locations with color mapping based on 'avg_pr'
+        scatter = gdf_platform.plot(
+            ax=ax,
+            markersize=gdf_platform['avg_pr'] * 10 if 'avg_pr' in gdf_platform.columns else 50,
+            cmap=self.cmap,
+            norm=self.norm,
+            alpha=0.7,
+            legend=False  # Disable the automatic legend to customize it later
+        )
+
+        # Add a basemap using contextily
+        ctx.add_basemap(ax, source=ctx.providers.OpenStreetMap.Mapnik)
+
+        # Add a color bar (legend) on the side of the map
+        sm = plt.cm.ScalarMappable(cmap=self.cmap, norm=self.norm)
+        sm.set_array([])
+        cbar = plt.colorbar(sm, ax=ax, orientation='vertical', fraction=0.02, pad=0.04)
+        cbar.set_label('Average Price', rotation=270, labelpad=20)
+
+        # Set the plot title
+        ax.set_title(f"Map of Kapsalon Locations and Their Average Prices ({platform_name.capitalize()})", fontsize=18)
+
+        # Remove axis for a cleaner look
+        ax.set_axis_off()
+
+        # Ensure the output directory exists
+        os.makedirs(output_directory, exist_ok=True)
+
+        # Save the plot as a .jpg file
+        output_file_path = os.path.join(output_directory, f"{platform_name}_kapsalons_map.jpg")
+        plt.savefig(output_file_path, bbox_inches='tight', dpi=300, format='jpg')
+        plt.close()  # Close the plot to free up memory
+
+    def create_combined_map(self, border_path,output_file=None):
         """
         Create a combined map showing all platforms on the same plot.
 
         Args:
             output_file (str): Path to save the output file. If None, the plot will not be saved.
         """
+        if self.borders is None:
+            self.set_borders(border_path)
+        self.df_all = self.df_all[self.df_all['rest_count'] > 0]
+
         fig, ax = plt.subplots(figsize=(12, 8))
 
         # Plot the boundaries
@@ -109,13 +166,16 @@ class MapMaker:
         else:
             plt.show()
 
-    def create_individual_maps(self, output_directory="output_maps/"):
+    def create_individual_maps(self, border_path,output_directory="output_maps/"):
         """
         Create individual maps for each platform with color scale and size scale.
         
         Args:
             output_directory (str): Directory to save the individual maps. Default is 'output_maps/'.
         """
+        self.df_all = self.df_all[self.df_all['rest_count'] > 0]
+        if  self.borders is None:
+            self.set_borders(border_path)
         for platform in self.df_all['platform'].unique():
             gdf_platform = self.gdf_all[self.gdf_all['platform'] == platform]
             fig, ax = plt.subplots(figsize=(12, 8))
@@ -184,115 +244,5 @@ class PlotMaker():
         fig.update_yaxes(categoryorder='array', categoryarray=self.df['name'][::-1])
         fig.show()
 
-class KapsalonMapMaker:
-    def __init__(self, file_paths):
-        """
-        Initialize the KapsalonMapMaker class with file paths for each platform.
-
-        Args:
-            file_paths (dict): Dictionary where keys are platform names and values are file paths.
-        """
-        self.file_paths = file_paths
-        self.df_all = self.load_data()
-        self.gdf_all = self.create_geodataframe()
-        self.norm = plt.Normalize(self.gdf_all['avg_pr'].min(), self.gdf_all['avg_pr'].max())
-        self.cmap = plt.cm.cividis  # Color map for visualization
-
-    def load_data(self):
-        """
-        Load data from CSV files and combine it into one DataFrame.
-
-        Returns:
-            pd.DataFrame: Combined DataFrame with data from all platforms.
-        """
-        dfs = []
-        for platform, path in self.file_paths.items():
-            df = pd.read_csv(path)
-            df['platform'] = platform
-            df['color'] = self.platform_colors[platform]
-            dfs.append(df)
-        return pd.concat(dfs, ignore_index=True)
-
-    def create_geodataframe(self):
-        """
-        Convert the combined DataFrame into a GeoDataFrame with WGS84 coordinate reference system (EPSG:4326).
-
-        Returns:
-            gpd.GeoDataFrame: GeoDataFrame with the data and geometry.
-        """
-        gdf = gpd.GeoDataFrame(
-            self.df_all,
-            geometry=gpd.points_from_xy(self.df_all['longitude'], self.df_all['latitude']),
-            crs='EPSG:4326'
-        )
-        # Convert to EPSG:3857 for compatibility with contextily
-        return gdf.to_crs(epsg=3857)
-
-    def create_kapsalon_map_for_platform(self, platform_name, output_directory="output_maps"):
-        """
-        Create and save a map for a given platform with color mapping based on 'avg_pr'.
-
-        Args:
-            platform_name (str): The name of the platform to create a map for.
-            output_directory (str): Directory to save the map .jpg file. Default is 'output_maps'.
-        """
-        gdf_platform = self.gdf_all[self.gdf_all['platform'] == platform_name]
-
-        # Create a plot for better visibility
-        fig, ax = plt.subplots(figsize=(14, 10))
-
-        # Plot the restaurant locations with color mapping based on 'avg_pr'
-        scatter = gdf_platform.plot(
-            ax=ax,
-            markersize=gdf_platform['avg_pr'] * 10 if 'avg_pr' in gdf_platform.columns else 50,
-            cmap=self.cmap,
-            norm=self.norm,
-            alpha=0.7,
-            legend=False  # Disable the automatic legend to customize it later
-        )
-
-        # Add a basemap using contextily
-        ctx.add_basemap(ax, source=ctx.providers.OpenStreetMap.Mapnik)
-
-        # Add a color bar (legend) on the side of the map
-        sm = plt.cm.ScalarMappable(cmap=self.cmap, norm=self.norm)
-        sm.set_array([])
-        cbar = plt.colorbar(sm, ax=ax, orientation='vertical', fraction=0.02, pad=0.04)
-        cbar.set_label('Average Price', rotation=270, labelpad=20)
-
-        # Set the plot title
-        ax.set_title(f"Map of Kapsalon Locations and Their Average Prices ({platform_name.capitalize()})", fontsize=18)
-
-        # Remove axis for a cleaner look
-        ax.set_axis_off()
-
-        # Ensure the output directory exists
-        os.makedirs(output_directory, exist_ok=True)
-
-        # Save the plot as a .jpg file
-        output_file_path = os.path.join(output_directory, f"{platform_name}_kapsalons_map.jpg")
-        plt.savefig(output_file_path, bbox_inches='tight', dpi=300, format='jpg')
-        plt.close()  # Close the plot to free up memory
-
-'''
-
-from plotmaker import KapsalonMapMaker 
-
-# Paths to the CSV files containing the data for each platform
-file_paths = {
-    'ubereats': 'kapsalons_data/kapsalons_ubereats.csv', 
-    'takeaway': 'kapsalons_data/kapsalons_takeaway.csv', 
-    'deliveroo': 'kapsalons_data/kapsalons_deliveroo.csv'  
-}
-
-# Create an instance of the PlotMaker class with the provided file paths and borders file
-kapsalon_map_maker = KapsalonMapMaker(file_paths)
-
-# Save individual maps for each platform to the "output_maps/" directory
-kapsalon_map_maker.create_kapsalon_map_for_platform('ubereats', output_directory="output_maps")
-kapsalon_map_maker.create_kapsalon_map_for_platform('takeaway', output_directory="output_maps")
-kapsalon_map_maker.create_kapsalon_map_for_platform('deliveroo', output_directory="output_maps")
-
-'''
 
 

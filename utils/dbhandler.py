@@ -232,7 +232,7 @@ class DataBaseManager():
                     filter(menu_item.name.like('%kapsalon%')). \
                     group_by(restaurants.name)
         res = query.all()
-        df = pd.DataFrame(res,columns=['name','avg_pr','latitude','longitude'])
+        df = pd.DataFrame(res,columns=['name','avg_pr','lat','lon'])
         session.close()
         return df
     
