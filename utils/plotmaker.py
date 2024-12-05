@@ -244,9 +244,24 @@ class PlotMaker():
         fig.update_yaxes(categoryorder='array', categoryarray=self.df['name'][::-1])
         fig.show()
 
+    def plot_top_categories(self):
+        df = self.df.head()
+        df['category'] = df['category'].replace('2600','Miscellaneous')
+        fig = px.bar(df, x='category', y='avg_rating',
+                hover_data=['avg_rating','avg_number_of_ratings'], color='category',
+                title=f'Top 5 categories in {self.df_name}',
+                labels={'avg_rating':'Rating','category':'Category'}
+                )
+        fig.update_traces(showlegend=False)
+        fig.update_layout( xaxis={'categoryorder':'total descending'},title_x=0.5)
+        fig.show()
+
     def price_distribution(self):
+        
         df_clean = self.df.apply(pd.to_numeric, errors='coerce')
         df_clean = df_clean.dropna(how='any')
+        df_clean['ubereats'] = df_clean['ubereats'].apply(lambda x: x / 100 if pd.notnull(x) else x)
+
         df_long = df_clean.melt(var_name='Platform', value_name='Price (in Euros)')
         
         price_bins = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
@@ -258,7 +273,7 @@ class PlotMaker():
             df_long, 
             x='Price Range', 
             color='Platform', 
-            title=f"Price Distribution per Platform (in Euros) - {self.df_name}",
+            title=f"Price Distribution per Platform (in Euros) -",
             labels={"Price Range": "Price Range (in Euros)", "count": "Frequency"},
             category_orders={"Price Range": price_labels},
             barmode='group', 
