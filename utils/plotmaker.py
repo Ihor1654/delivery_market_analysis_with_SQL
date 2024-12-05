@@ -184,6 +184,35 @@ class PlotMaker():
         fig.update_yaxes(categoryorder='array', categoryarray=self.df['name'][::-1])
         fig.show()
 
+    def price_distribution(self):
+        df_clean = self.df.apply(pd.to_numeric, errors='coerce')
+        df_clean = df_clean.dropna(how='any')
+        df_long = df_clean.melt(var_name='Platform', value_name='Price (in Euros)')
+        
+        price_bins = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+        price_labels = ['0-10', '10-20', '20-30', '30-40', '40-50', '50-60', '60-70', '70-80', '80-90', '90-100']
+        
+        df_long['Price Range'] = pd.cut(df_long['Price (in Euros)'], bins=price_bins, labels=price_labels, right=False)
+        
+        fig = px.histogram(
+            df_long, 
+            x='Price Range', 
+            color='Platform', 
+            title=f"Price Distribution per Platform (in Euros) - {self.df_name}",
+            labels={"Price Range": "Price Range (in Euros)", "count": "Frequency"},
+            category_orders={"Price Range": price_labels},
+            barmode='group', 
+            color_discrete_map={
+                'ubereats': 'blue',
+                'takeaway': 'green',
+                'deliveroo': 'red'
+            }
+        )
+        
+        print(df_long['Price Range'].value_counts())
+        fig.show()
+
+
 class KapsalonMapMaker:
     def __init__(self, file_paths):
         """
