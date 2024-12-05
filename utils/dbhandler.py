@@ -92,10 +92,18 @@ class DataBaseManager():
         match db_name:
             case 'ubereats':
                 restaurant_to_categories = tables['restaurant_to_categories']
-                query = session.query(cast(restaurants.c.id, String).label('id'),restaurants.c.title.label('name'),restaurants.c.rating__rating_value.label('rating'),restaurants.c.rating__review_count.label('review_count') ).outerjoin(restaurant_to_categories,restaurants.c.id == restaurant_to_categories.c.restaurant_id).where(restaurant_to_categories.c.category == 'Pizza',cast(restaurants.c.rating__review_count,Integer)>35).order_by(desc('rating')).limit(10)
+                query = session.query(cast(restaurants.c.id, String).label('id'),
+                                      restaurants.c.title.label('name'),
+                                      restaurants.c.rating__rating_value.label('rating'),
+                                      restaurants.c.rating__review_count.label('review_count') 
+                                      ).outerjoin(restaurant_to_categories,restaurants.c.id == restaurant_to_categories.c.restaurant_id).where(restaurant_to_categories.c.category == 'Pizza',cast(restaurants.c.rating__review_count,Integer)>35).order_by(desc('rating')).limit(10)
             case 'takeaway':
                 rest_categories = tables['categories_restaurants']
-                query = session.query(restaurants.primarySlug.label('id'),restaurants.name,restaurants.ratings.label('rating'),restaurants.ratingsNumber.label('review_count'),).distinct().outerjoin(rest_categories,rest_categories.restaurant_id == restaurants.primarySlug).filter(rest_categories.category_id.like('%pizza%')).where(cast(restaurants.ratingsNumber,Integer)>700).order_by(desc('rating'),desc('review_count')).limit(10)
+                query = session.query(restaurants.primarySlug.label('id'),
+                                      restaurants.name,
+                                      restaurants.ratings.label('rating'),
+                                      restaurants.ratingsNumber.label('review_count')
+                                      ).distinct().outerjoin(rest_categories,rest_categories.restaurant_id == restaurants.primarySlug).filter(rest_categories.category_id.like('%pizza%')).where(cast(restaurants.ratingsNumber,Integer)>700).order_by(desc('rating'),desc('review_count')).limit(10)
             case 'deliveroo':
                query = session.query(
                    restaurants.id,
@@ -188,45 +196,39 @@ class DataBaseManager():
             case 'takeaway':
                 menu_item = tables['menuItems']
                 query = session.query(
-                    restaurants.c.name.label('restaurant_name'),
-                    func.avg(menu_item.c.price).label('avg_price'),  
-                    func.min(locations.c.latitude).label('latitude'),
-                    func.min(locations.c.longitude).label('longitude')
+                    restaurants.name.label('restaurant_name'),
+                    func.avg(menu_item.price).label('avg_price'),  
+                    func.min(locations.latitude).label('latitude'),
+                    func.min(locations.longitude).label('longitude')
                     ).select_from(menu_item). \
-                    join(restaurants, restaurants.c.primarySlug == menu_item.c.primarySlug). \
-                    join(locations_to_restaurants, locations_to_restaurants.c.restaurant_id == restaurants.c.primarySlug). \
-                    join(locations, locations.c.ID == locations_to_restaurants.c.location_id). \
-                    filter(menu_item.c.name.like('%kapsalon%')). \
-                    group_by(restaurants.c.name)
+                    join(restaurants, restaurants.primarySlug == menu_item.primarySlug). \
+                    join(locations_to_restaurants, locations_to_restaurants.c.restaurant_id == restaurants.primarySlug). \
+                    join(locations, locations.ID == locations_to_restaurants.c.location_id). \
+                    filter(menu_item.name.like('%kapsalon%')). \
+                    group_by(restaurants.name)
             case 'deliveroo':
                 menu_item = tables['menu_items']
-                query = session.query(restaurants.c.name.label('restaurant_name'),
-                    func.avg(menu_item.c.price).label('avg_price'),  
-                    func.min(locations.c.latitude).label('latitude'),
-                    func.min(locations.c.longitude).label('longitude')
+                query = session.query(restaurants.name.label('restaurant_name'),
+                    func.avg(menu_item.price).label('avg_price'),  
+                    func.min(locations.latitude).label('latitude'),
+                    func.min(locations.longitude).label('longitude')
                     ).select_from(menu_item). \
-                    join(restaurants, restaurants.c.id == menu_item.c.restaurant_id). \
-                    join(locations_to_restaurants, locations_to_restaurants.c.restaurant_id == restaurants.c.id). \
-                    join(locations, locations.c.id == locations_to_restaurants.c.location_id). \
-                    filter(menu_item.c.name.like('%kapsalon%')). \
-                    group_by(restaurants.c.name)
-        
-        
+                    join(restaurants, restaurants.id == menu_item.restaurant_id). \
+                    join(locations_to_restaurants, locations_to_restaurants.c.restaurant_id == restaurants.id). \
+                    join(locations, locations.id == locations_to_restaurants.c.location_id). \
+                    filter(menu_item.name.like('%kapsalon%')). \
+                    group_by(restaurants.name)
         res = query.all()
-        for row in res:
-            print(f' name: {row.restaurant_name} avg_pr: {row.avg_price} lat: {row.latitude}')
         df = pd.DataFrame(res,columns=['name','avg_pr','latitude','longitude'])
         session.close()
         return df
     
-    def create_kapsalons_df_for_all_db(self):
-        kapsalons_dict = {}
-        kapsalons_dict['ubereats'] = self.get_kapsalons(db_name='ubereats')
-        kapsalons_dict['takeaway'] = self.get_kapsalons(db_name='takeaway')
-        kapsalons_dict['deliveroo'] = self.get_kapsalons(db_name='deliveroo')
-        
-        kapsalons_df = pd.DataFrame({key: pd.Series(value) for key, value in kapsalons_dict.items()})
-        return kapsalons_df
+    def get_full_kapsalons_df(self):
+            kapsalons_list = []
+            for db_name in self.db_data.keys():
+             kapsalons_list.append( self.get_kapsalons(db_name=db_name))
+             kapsalons_df = pd.concat(kapsalons_list, ignore_index=True)
+            return kapsalons_df
     
     def save_kapsalons_to_csv(self, file_name='kapsalons.csv'):
         df = self.create_kapsalons_df_for_all_db()
