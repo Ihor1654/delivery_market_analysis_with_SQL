@@ -183,6 +183,38 @@ class DataBaseManager():
         df.to_csv(file_name, index=False)
         print(f"Prices saved to {file_name}")
 
+    def get_top_categories(self,db_name):
+        session = self.get_session(db_name)
+        tables = self.get_tables(db_name)
+        restaurants = tables['restaurants']
+        match db_name:
+            case 'ubereats':
+                restaurant_to_categories = tables['restaurant_to_categories']
+                query = session.query(
+                    restaurant_to_categories.c.category,
+                    func.avg(restaurants.c.rating__rating_value).label('avg_rating'),
+                    func.avg(restaurants.c.rating__review_count).label('avg_number_of_ratings')
+                    ).join(restaurants, restaurants.c.id == restaurant_to_categories.c.restaurant_id).group_by(restaurant_to_categories.c.category).having(func.avg(restaurants.c.rating__review_count)>100).order_by(func.avg(restaurants.c.rating__rating_value).desc())
+            case 'takeaway':
+                rest_categories = tables['categories_restaurants']
+                query = session.query(
+                     rest_categories.category_id.label('category'),
+                     func.avg(restaurants.ratings).label('avg_rating'),
+                     func.avg(restaurants.ratingsNumber).label('avg_number_of_ratings')).join(restaurants, restaurants.primarySlug == rest_categories.restaurant_id).group_by(rest_categories.category_id).having(func.avg(restaurants.ratingsNumber)>100).order_by(func.avg(restaurants.ratings).desc())
+
+            case 'deliveroo':
+                query = session.query(restaurants.category,
+                                     func.avg(restaurants.rating).label('avg_rating'),
+                                     func.avg(restaurants.rating_number).label('avg_number_of_ratings')).group_by(restaurants.category).having(func.avg(restaurants.rating_number)>100).order_by(func.avg(restaurants.rating).desc())
+        
+        df=pd.read_sql(query.statement,query.session.bind)
+        df['adjustedRating'] = df['avg_rating']*0.3 + df['avg_number_of_ratings']*0.7
+        sorted_df = df.sort_values(by='adjustedRating',ascending=False)
+        session.close()
+        return sorted_df
+        
+
+
     
 
 
@@ -232,7 +264,7 @@ class DataBaseManager():
                     filter(menu_item.name.like('%kapsalon%')). \
                     group_by(restaurants.name)
         res = query.all()
-        df = pd.DataFrame(res,columns=['name','avg_pr','latitude','longitude'])
+        df = pd.DataFrame(res,columns=['name','avg_pr','lat','lon'])
         session.close()
         return df
     
