@@ -1,4 +1,4 @@
-.ipynb
+.venv
 /myvenv/
 /.venv/
-delivery_market_analysis_venv/
+*.ipynb
