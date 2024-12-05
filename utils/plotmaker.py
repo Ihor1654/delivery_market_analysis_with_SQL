@@ -3,8 +3,10 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import contextily as ctx
 import numpy as np
+import plotly.express as px
 
-class PlotMaker:
+
+class MapMaker:
     def __init__(self, file_paths, borders_path):
         """
         Initialize the PlotMaker class with file paths for the data and borders.
@@ -146,6 +148,51 @@ class PlotMaker:
             output_file = f"{output_directory}{platform}_distribution.jpg"
             plt.savefig(output_file, bbox_inches='tight', dpi=300, format='jpg')
             plt.close()  # Close the plot to avoid it being shown
+
+
+
+
+
+
+
+class PlotMaker():
+    def __init__(self,df,name) -> None:
+        self.df = df
+        self.df_name = name
+    
+
+    def change_df(self,df,name):
+        self.df = df
+        self.df_name = name
+
+    
+    def create_top_ten_pizza_plot(self,):
+        self.df['review_count'] = pd.to_numeric(self.df['review_count'], errors='coerce')
+        
+        fig = px.scatter(self.df, 
+        x='weight_score', 
+        y='name', 
+        size='review_count',  
+        color='rating',  
+        hover_name='name',  
+        size_max=60,
+        title=f'Top 10 Restaurants by Rating and Review Count ({self.df_name})',
+        labels={'rating': 'Rating', 'name': 'Restaurant', 'review_count': 'Review Count','weight_score':'Adjusted Rating'}
+        )
+        fig.update_layout(
+            xaxis_title='Adjusted ratio',
+            yaxis_title='Restaurant',
+            showlegend=False
+        )
+        fig.update_yaxes(categoryorder='array', categoryarray=self.df['name'][::-1])
+        fig.show()
+
+
+
+
+
+
+
 
 
 '''

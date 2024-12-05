@@ -91,20 +91,33 @@ class DataBaseManager():
         print(type(restaurants))
         match db_name:
             case 'ubereats':
+                adjust_rating = (
+                        (restaurants.c.rating__rating_value * 0.3) + 
+                        (restaurants.c.rating__review_count * 0.7)
+                        ).label('weighted_score')
                 restaurant_to_categories = tables['restaurant_to_categories']
                 query = session.query(cast(restaurants.c.id, String).label('id'),
                                       restaurants.c.title.label('name'),
                                       restaurants.c.rating__rating_value.label('rating'),
-                                      restaurants.c.rating__review_count.label('review_count') 
-                                      ).outerjoin(restaurant_to_categories,restaurants.c.id == restaurant_to_categories.c.restaurant_id).where(restaurant_to_categories.c.category == 'Pizza',cast(restaurants.c.rating__review_count,Integer)>35).order_by(desc('rating')).limit(10)
+                                      func.cast(func.replace(restaurants.c.rating__review_count, '+', ''),Integer).label('review_count'),
+                                      adjust_rating 
+                                      ).outerjoin(restaurant_to_categories,restaurants.c.id == restaurant_to_categories.c.restaurant_id).where(restaurant_to_categories.c.category == 'Pizza').order_by(desc(adjust_rating)).limit(10)
             case 'takeaway':
+                adjust_rating = ((restaurants.ratings*0.3)
+                                 + (restaurants.ratingsNumber * 0.7)).label('weighted_score')
                 rest_categories = tables['categories_restaurants']
                 query = session.query(restaurants.primarySlug.label('id'),
                                       restaurants.name,
                                       restaurants.ratings.label('rating'),
-                                      restaurants.ratingsNumber.label('review_count')
-                                      ).distinct().outerjoin(rest_categories,rest_categories.restaurant_id == restaurants.primarySlug).filter(rest_categories.category_id.like('%pizza%')).where(cast(restaurants.ratingsNumber,Integer)>700).order_by(desc('rating'),desc('review_count')).limit(10)
+                                      restaurants.ratingsNumber.label('review_count'),
+                                      adjust_rating
+                                      ).distinct().outerjoin(rest_categories,rest_categories.restaurant_id == restaurants.primarySlug).filter(rest_categories.category_id.like('%pizza%')).where().order_by(desc('weighted_score')).limit(10)
             case 'deliveroo':
+               
+               adjust_rating = (
+                   (restaurants.rating*0.3)+
+                   (func.cast(func.replace(restaurants.rating_number, '+', ''),Integer)*0.7)
+               ).label('weighted_score')
                query = session.query(
                    restaurants.id,
                    restaurants.name,
@@ -112,17 +125,17 @@ class DataBaseManager():
                   func.cast(
                     func.replace(restaurants.rating_number, '+', ''),
                     Integer
-                ).label('review_count')
-                   ).where( 
-                       cast(restaurants.rating_number, Integer) > 100,  
+                ),
+                adjust_rating
+                   ).where(  
                        restaurants.category == 'Pizza' 
                        ).order_by(
-                           desc(restaurants.rating),
-                           desc(restaurants.rating_number)
+                           desc(adjust_rating),
                            ).limit(10)
         
         res = query.all()
-        df = pd.DataFrame(res,columns=['id','name','rating','review_count'])
+        df = pd.DataFrame(res,columns=['id','name','rating','review_count','weight_score'])
+        print(df)
         session.close()
         return df
 
