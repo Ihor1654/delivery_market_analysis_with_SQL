@@ -252,7 +252,7 @@ class KapsalonMapMaker:
         cbar.set_label('Average Price', rotation=270, labelpad=20)
 
         # Set the plot title
-        ax.set_title(f"Map of Kapsalon Locations and Their Average Prices ({platform_name.capitalize()})", fontsize
+        ax.set_title(f"Map of Kapsalon Locations and Their Average Prices ({platform_name.capitalize()})", fontsize=18)
 
         # Remove axis for a cleaner look
         ax.set_axis_off()
