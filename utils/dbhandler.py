@@ -288,7 +288,6 @@ class DataBaseManager():
         df = self.get_full_kapsalons_df()
         df.to_csv(file_name, index=False)
         print(f"Kapsalons saved to {file_name}")
-    
     def get_top_restaurants_by_price_to_rating(self, db_name, limit=10):
         session = self.get_session(db_name)
         tables = self.get_tables(db_name)
@@ -363,6 +362,64 @@ class DataBaseManager():
         session.close()
         print(df.head)
         return df
+    
+    def get_veg_restaurants(self,db_name):
+        session = self.get_session(db_name)
+        tables = self.get_tables(db_name)
+        Restaurant = tables['restaurants']
+        match db_name:
+            case 'takeaway':
+                MenuItem=tables['menuItems']
+                query = session.query(
+                distinct(Restaurant.name).label('Restaurant_Name'),
+                Restaurant.latitude,
+                Restaurant.longitude,
+                ).join(MenuItem, Restaurant.primarySlug == MenuItem.primarySlug
+                ).filter(MenuItem.name.like('%veg%'))
+
+                takeaway_veg=pd.read_sql(query.statement,query.session.bind)
+                takeaway_veg['longitude']= takeaway_veg['longitude'].astype('float64')
+                takeaway_veg['latitude']= takeaway_veg['latitude'].astype('float64')
+                takeaway_veg['source']='takeaway'
+
+                return takeaway_veg
+
+            case 'ubereats':
+                MenuItem=tables['menu_items']
+                query = session.query(
+                distinct(Restaurant.c.title).label('Restaurant_Name'),
+                Restaurant.c.location__latitude.label('latitude'),
+                Restaurant.c.location__longitude.label('longitude')
+                ).join(MenuItem, Restaurant.c.id == MenuItem.c.restaurant_id
+                ).filter(MenuItem.c.name.like('%veg%'))
+
+                ubereats_veg=pd.read_sql(query.statement,query.session.bind)
+                ubereats_veg['latitude'] = ubereats_veg['latitude'].astype('float64')
+                ubereats_veg['longitude'] = ubereats_veg['longitude'].astype('float64')
+                ubereats_veg['source']='ubereats'
+
+                return ubereats_veg
+
+            case 'deliveroo':
+                MenuItem=tables['menu_items']
+                query = session.query(
+                distinct(Restaurant.name).label('Restaurant_Name'),
+                Restaurant.latitude,
+                Restaurant.longitude,
+                ).join(MenuItem, Restaurant.id == MenuItem.restaurant_id
+                ).filter(MenuItem.name.like('%veg%'))
+
+                deliveroo_veg=pd.read_sql(query.statement,query.session.bind)
+                deliveroo_veg['latitude']= deliveroo_veg['latitude'].astype('float64')
+                deliveroo_veg['longitude']= deliveroo_veg['longitude'].astype('float64')
+                deliveroo_veg['source']='deliveroo'
+
+                return deliveroo_veg
+
+
+
+
+
 
 
 
