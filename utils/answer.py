@@ -38,11 +38,11 @@ class Answerer:
     def answer_quest_3(self):
         print('Which are the top 10 pizza restaurants by rating?')
         df_uber = self.manager.get_top10_Pizza_restaurants('ubereats')
-        df_takeawat = self.manager.get_top10_Pizza_restaurants('takeaway')
+        df_takeaway = self.manager.get_top10_Pizza_restaurants('takeaway')
         df_deliveroo = self.manager.get_top10_Pizza_restaurants('deliveroo')
         ploter = PlotMaker(df_uber,'UberEats')
         ploter.create_top_ten_pizza_plot()
-        ploter.change_df(df_takeawat,'Takeaway')
+        ploter.change_df(df_takeaway,'Takeaway')
         ploter.create_top_ten_pizza_plot()
         ploter.change_df(df_deliveroo,'Deliveroo')
         ploter.create_top_ten_pizza_plot()
@@ -55,5 +55,14 @@ class Answerer:
         kaps_maker.create_kapsalon_map_for_platform('takeaway')
         kaps_maker.create_kapsalon_map_for_platform('deliveroo')
 
-
+    def answer_quest_5(self):
+        df_uber = self.manager.get_top_categories('ubereats')
+        df_takeaway = self.manager.get_top_categories('takeaway')
+        df_deliveroo = self.manager.get_top_categories('deliveroo')
+        ploter = PlotMaker(df_uber,'Ubereats')
+        ploter.plot_top_categories()
+        ploter.change_df(df_takeaway,'Takeaway')      
+        ploter.plot_top_categories()
+        ploter.change_df(df_deliveroo,'Deliveroo')
+        ploter.plot_top_categories()
 
