@@ -2,7 +2,7 @@
 ## &#x1F4DC; Description
 Hi! This is a project me and my team made in relation to querying! Hereby we were required to answer 5 questions accompanied with visualization. 
 We took a modular approach using the sqlalchemy library in python.
-![delivery driver](‪assets/deliverydude.gif)
+![delivery driver](https://github.com/yourusername/delivery-market-analysis/blob/main/assets/deliverydude.gif?raw=true))
 
 ## :factory:How does it work?
 So essentially we divided up the construction into several python files. a file to handle the databases, a file to handle querying, a file to handle the plotting of the data and finally a file that gives out the answer along with a main file that put's it all together. 
