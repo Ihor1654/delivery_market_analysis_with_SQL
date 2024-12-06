@@ -56,6 +56,7 @@ class Answerer:
         kaps_maker.create_kapsalon_map_for_platform('deliveroo')
 
     def answer_quest_5(self):
+        print('Comparation of top 5 categories for diferent delivery serveces.')
         df_uber = self.manager.get_top_categories('ubereats')
         df_takeaway = self.manager.get_top_categories('takeaway')
         df_deliveroo = self.manager.get_top_categories('deliveroo')
@@ -66,3 +67,15 @@ class Answerer:
         ploter.change_df(df_deliveroo,'Deliveroo')
         ploter.plot_top_categories()
 
+    def answer_aditional_q_4(self):
+        df= self.manager.get_full_veg_restaurants()
+        ploter = PlotMaker(df,'FullVegs')
+        print(df.head())
+        ploter.plot_veg_restaurants()
+
+    def answer_all_mvp(self):
+        self.answer_quest_1()
+        self.answer_quest_2()
+        self.answer_quest_3()
+        self.answer_quest_4()
+        self.answer_quest_5()

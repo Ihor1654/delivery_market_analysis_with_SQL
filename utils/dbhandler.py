@@ -275,7 +275,7 @@ class DataBaseManager():
             kapsalons_list = []
             for db_name in self.db_data.keys():
              kapsalons_list.append( self.get_kapsalons(db_name=db_name))
-             kapsalons_df = pd.concat(kapsalons_list, ignore_index=True)
+            kapsalons_df = pd.concat(kapsalons_list, ignore_index=True)
             return kapsalons_df
             
     def save_to_csv_kapsalon_dfs(self):
@@ -372,14 +372,14 @@ class DataBaseManager():
                 MenuItem=tables['menuItems']
                 query = session.query(
                 distinct(Restaurant.name).label('Restaurant_Name'),
-                Restaurant.latitude,
-                Restaurant.longitude,
+                Restaurant.latitude.label('lat'),
+                Restaurant.longitude.label('lon'),
                 ).join(MenuItem, Restaurant.primarySlug == MenuItem.primarySlug
                 ).filter(MenuItem.name.like('%veg%'))
 
                 takeaway_veg=pd.read_sql(query.statement,query.session.bind)
-                takeaway_veg['longitude']= takeaway_veg['longitude'].astype('float64')
-                takeaway_veg['latitude']= takeaway_veg['latitude'].astype('float64')
+                takeaway_veg['lon']= takeaway_veg['lon'].astype('float64')
+                takeaway_veg['lat']= takeaway_veg['lat'].astype('float64')
                 takeaway_veg['source']='takeaway'
 
                 return takeaway_veg
@@ -388,14 +388,14 @@ class DataBaseManager():
                 MenuItem=tables['menu_items']
                 query = session.query(
                 distinct(Restaurant.c.title).label('Restaurant_Name'),
-                Restaurant.c.location__latitude.label('latitude'),
-                Restaurant.c.location__longitude.label('longitude')
+                Restaurant.c.location__latitude.label('lat'),
+                Restaurant.c.location__longitude.label('lon')
                 ).join(MenuItem, Restaurant.c.id == MenuItem.c.restaurant_id
                 ).filter(MenuItem.c.name.like('%veg%'))
 
                 ubereats_veg=pd.read_sql(query.statement,query.session.bind)
-                ubereats_veg['latitude'] = ubereats_veg['latitude'].astype('float64')
-                ubereats_veg['longitude'] = ubereats_veg['longitude'].astype('float64')
+                ubereats_veg['lat'] = ubereats_veg['lat'].astype('float64')
+                ubereats_veg['lon'] = ubereats_veg['lon'].astype('float64')
                 ubereats_veg['source']='ubereats'
 
                 return ubereats_veg
@@ -404,17 +404,26 @@ class DataBaseManager():
                 MenuItem=tables['menu_items']
                 query = session.query(
                 distinct(Restaurant.name).label('Restaurant_Name'),
-                Restaurant.latitude,
-                Restaurant.longitude,
+                Restaurant.latitude.label('lat'),
+                Restaurant.longitude.label('lon'),
                 ).join(MenuItem, Restaurant.id == MenuItem.restaurant_id
                 ).filter(MenuItem.name.like('%veg%'))
 
                 deliveroo_veg=pd.read_sql(query.statement,query.session.bind)
-                deliveroo_veg['latitude']= deliveroo_veg['latitude'].astype('float64')
-                deliveroo_veg['longitude']= deliveroo_veg['longitude'].astype('float64')
+                deliveroo_veg['lat']= deliveroo_veg['lat'].astype('float64')
+                deliveroo_veg['lon']= deliveroo_veg['lon'].astype('float64')
                 deliveroo_veg['source']='deliveroo'
 
                 return deliveroo_veg
+            
+    def get_full_veg_restaurants(self):
+        veg_list = []
+        for db_name in self.db_data.keys():
+            veg_list.append( self.get_veg_restaurants(db_name=db_name))
+        veg_full_df = pd.concat(veg_list, ignore_index=True)
+        veg_full_df.to_csv(f'vizualizations_data/veg_restaurants.csv')
+
+
 
 
 

@@ -206,12 +206,19 @@ class MapMaker:
             ax.set_title(f"Distribution of Restaurants for {platform.capitalize()}", fontsize=16)
             ax.set_axis_off()
             plt.legend(loc='upper right')
-            plt.show()
-
             # Save the map as a .jpg file
             output_file = f"{output_directory}{platform}_distribution.jpg"
             plt.savefig(output_file, bbox_inches='tight', dpi=300, format='jpg')
             plt.close()  # Close the plot to avoid it being shown
+    
+    def create_vegi_map(self):
+        self.df_all = pd.read_csv('vizualizations_data/veg_restaurants.csv')
+        self.gdf_all = self.create_geodataframe()
+        fig = px.scatter_map(self.df_all, lat="lat", lon="lon",size_max=0.2,color="source",zoom=8, color_discrete_map={"ubereats": "navy", "deliveroo": "maroon","takeaway":"lightgreen"})
+        fig.update_traces(marker=dict(opacity=0.5))
+        fig.show()
+
+
 
 
 class PlotMaker():
