@@ -10,15 +10,15 @@ class Answerer:
         'takeaway': 'sqlite:///databases/takeaway.db'
         }
         self.file_paths_kaps = {
-            'ubereats': 'kapsalons_data/kapsalons_ubereats.csv', 
-            'takeaway': 'kapsalons_data/kapsalons_takeaway.csv', 
-            'deliveroo': 'kapsalons_data/kapsalons_deliveroo.csv'
+            'ubereats': 'vizualizations_data/kapsalons_data/kapsalons_ubereats.csv', 
+            'takeaway': 'vizualizations_data/kapsalons_data/kapsalons_takeaway.csv', 
+            'deliveroo': 'vizualizations_data/kapsalons_data/kapsalons_deliveroo.csv'
             }
         self.file_paths = {
-            'ubereats': 'data_for_maps/ubereats_data.csv', 
-            'takeaway': 'data_for_maps/takeaway_data.csv', 
-            'deliveroo': 'data_for_maps/deliveroo_data.csv'}
-        self.border_path = 'belgium-with-regions_.geojson'
+            'ubereats': 'vizualizations_data/ubereats_data.csv', 
+            'takeaway': 'vizualizations_data/takeaway_data.csv', 
+            'deliveroo': 'vizualizations_data/deliveroo_data.csv'}
+        self.border_path = 'vizualizations_data/belgium-with-regions_.geojson'
         self.manager = DataBaseManager(self.db_urls)
 
 
