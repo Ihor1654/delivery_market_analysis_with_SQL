@@ -82,6 +82,7 @@ class DataBaseManager():
         df = pd.DataFrame(res,columns=['id','name','lat','lon','rest_count'])
         session.close()
         return df
+
     
 
     def get_top10_Pizza_restaurants(self,db_name):
@@ -142,12 +143,14 @@ class DataBaseManager():
   
 
 
-    def create_df_for_all_db_rpl(self):
-        df_dict = {}
-        df_dict['ubereats'] = self.rest_per_loc_query().head()
-        df_dict['takeaway'] = self.rest_per_loc_query(db_name='takeaway').head()
-        df_dict['deliveroo'] = self.rest_per_loc_query(db_name='deliveroo').head()
-        return df_dict
+    def save_to_csv_dfs_for_rpl(self):
+        df_uber = self.rest_per_loc_query().head()
+        df_uber.to_csv('data_for_maps/ubereats_data.csv')
+        df_takeaway = self.rest_per_loc_query(db_name='takeaway').head()
+        df_takeaway.to_csv('data_for_maps/takeaway_data.csv')
+        df_deliveroo = self.rest_per_loc_query(db_name='deliveroo').head()
+        df_deliveroo.to_csv('data_for_maps/deliveroo_data.csv')
+
     
     def query_prices_per_db(self, db_name='ubereats'):
         session = self.get_session(db_name)
@@ -274,9 +277,15 @@ class DataBaseManager():
              kapsalons_list.append( self.get_kapsalons(db_name=db_name))
              kapsalons_df = pd.concat(kapsalons_list, ignore_index=True)
             return kapsalons_df
+            
+    def save_to_csv_kapsalon_dfs(self):
+            for db_name in self.db_data.keys():
+              df = self.get_kapsalons(db_name=db_name)
+              df.to_csv(f'kapsalons_data/kapsalons_{db_name}.csv')
+            
     
     def save_kapsalons_to_csv(self, file_name='kapsalons.csv'):
-        df = self.create_kapsalons_df_for_all_db()
+        df = self.get_full_kapsalons_df()
         df.to_csv(file_name, index=False)
         print(f"Kapsalons saved to {file_name}")
 
