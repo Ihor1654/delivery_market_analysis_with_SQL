@@ -5,6 +5,7 @@ import contextily as ctx
 import numpy as np
 import plotly.express as px
 import os
+import plotly.graph_objects as go
 
 
 
@@ -255,6 +256,13 @@ class PlotMaker():
         fig.update_traces(showlegend=False)
         fig.update_layout( xaxis={'categoryorder':'total descending'},title_x=0.5)
         fig.show()
+
+    def plot_veg_restaurants(self):
+        df=self.df
+        fig = px.scatter_map(df, lat="latitude", lon="longitude",size_max=0.2,color="source",zoom=8, color_discrete_map={"ubereats": "navy", "deliveroo": "maroon","takeaway":"lightgreen"})
+        fig.update_traces(marker=dict(opacity=0.5))
+        fig.show()
+
 
     def price_distribution(self):
         
