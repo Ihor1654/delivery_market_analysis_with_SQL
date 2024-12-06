@@ -3,7 +3,7 @@ from sqlalchemy import create_engine,inspect,func,desc, cast,distinct, not_
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
 
-from sqlalchemy import Table, MetaData, String, Integer
+from sqlalchemy import Table, MetaData, String, Integer,Float
 import pandas as pd
 db_urls = {
         'ubereats': 'sqlite:///databases/ubereats.db',
@@ -288,9 +288,140 @@ class DataBaseManager():
         df = self.get_full_kapsalons_df()
         df.to_csv(file_name, index=False)
         print(f"Kapsalons saved to {file_name}")
+    def get_top_restaurants_by_price_to_rating(self, db_name, limit=10):
+        session = self.get_session(db_name)
+        tables = self.get_tables(db_name)
+        restaurants = tables['restaurants']
+        match db_name:
+            case 'ubereats':
+                menu_items = tables['menu_items']
+                adjust_rating = (
+                    (cast(restaurants.c.rating__rating_value, Float) * 0.3) +
+                    (cast(restaurants.c.rating__review_count, Float) * 0.7)
+                    ).label('weighted_score')
+            
+                query = session.query(
+                    cast(restaurants.c.id,String).label('id'),
+                    restaurants.c.title.label('name'),
+                    (func.avg(cast(menu_items.c.price, Float))/100).label('average_price'),
+                    func.avg(adjust_rating).label('average_rating'),
+                    ((func.avg(cast(menu_items.c.price, Float)) / func.avg(adjust_rating))/100).label('price_to_rating_ratio')
+                    ).join(menu_items, restaurants.c.id == menu_items.c.restaurant_id).filter(
+                        func.coalesce(cast(menu_items.c.price, Float), 0) > 0,
+                        func.coalesce(cast(restaurants.c.rating__rating_value, Float), 0) > 0
+                        )\
+                            .group_by(restaurants.c.id, restaurants.c.title)\
+                                .order_by((func.avg(cast(menu_items.c.price, Float)) / func.avg(adjust_rating)).asc())\
+                                    .limit(limit)
+            
+            case 'takeaway':
+               menu_items = tables['menuItems']
+               adjust_rating = (
+                   (cast(restaurants.ratings, Float) * 0.3) +
+                   (cast(restaurants.ratingsNumber, Float) * 0.7)
+                   ).label('weighted_score')
+               query = session.query(restaurants.primarySlug.label('id'),
+                   restaurants.name.label('name'),
+                   func.avg(cast(menu_items.price, Float)).label('average_price'),
+                   func.avg(adjust_rating).label('average_rating'),
+                   (func.avg(cast(menu_items.price, Float)) / func.avg(adjust_rating)).label('price_to_rating_ratio')
+                   ).join(menu_items, restaurants.primarySlug == menu_items.primarySlug)\
+                    .filter(
+                        func.coalesce(cast(menu_items.price, Float), 0) > 0,
+                        func.coalesce(cast(restaurants.ratings, Float), 0) > 0
+                        )\
+                            .group_by(restaurants.primarySlug, restaurants.name)\
+                                .order_by((func.avg(cast(menu_items.price, Float)) / func.avg(adjust_rating)).asc())\
+                                    .limit(limit)
+            
 
-  
+            case 'deliveroo':
+                menu_items = tables['menu_items']
+                adjust_rating = (
+                    (cast(restaurants.rating, Float) * 0.3) +
+                    (cast(func.replace(restaurants.rating_number, '+', ''), Float) * 0.7)).label('weighted_score')
+                query = session.query(
+                    restaurants.id.label('id'),
+                    restaurants.name.label('name'),
+                    func.avg(cast(menu_items.price, Float)).label('average_price'),
+                    func.avg(adjust_rating).label('average_rating'),
+                    (func.avg(cast(menu_items.price, Float)) / func.avg(adjust_rating)).label('price_to_rating_ratio')
+                    ).join(menu_items, restaurants.id == menu_items.restaurant_id)\
+                        .filter(
+                            func.coalesce(cast(menu_items.price, Float), 0) > 0,
+                            func.coalesce(cast(restaurants.rating, Float), 0) > 0
+                            )\
+                                .group_by(restaurants.id, restaurants.name)\
+                                    .order_by((func.avg(cast(menu_items.price, Float)) / func.avg(adjust_rating)).asc())\
+                                        .limit(limit)
+            case _:
+                raise ValueError(f"Database '{db_name}' not supported.")
+            
+        res = query.all()
+        df = pd.DataFrame(res, columns=['id', 'name', 'average_price', 'average_rating', 'price_to_rating_ratio'])
+        session.close()
+        print(df.head)
+        return df
     
+    def get_veg_restaurants(self,db_name):
+        session = self.get_session(db_name)
+        tables = self.get_tables(db_name)
+        Restaurant = tables['restaurants']
+        match db_name:
+            case 'takeaway':
+                MenuItem=tables['menuItems']
+                query = session.query(
+                distinct(Restaurant.name).label('Restaurant_Name'),
+                Restaurant.latitude,
+                Restaurant.longitude,
+                ).join(MenuItem, Restaurant.primarySlug == MenuItem.primarySlug
+                ).filter(MenuItem.name.like('%veg%'))
+
+                takeaway_veg=pd.read_sql(query.statement,query.session.bind)
+                takeaway_veg['longitude']= takeaway_veg['longitude'].astype('float64')
+                takeaway_veg['latitude']= takeaway_veg['latitude'].astype('float64')
+                takeaway_veg['source']='takeaway'
+
+                return takeaway_veg
+
+            case 'ubereats':
+                MenuItem=tables['menu_items']
+                query = session.query(
+                distinct(Restaurant.c.title).label('Restaurant_Name'),
+                Restaurant.c.location__latitude.label('latitude'),
+                Restaurant.c.location__longitude.label('longitude')
+                ).join(MenuItem, Restaurant.c.id == MenuItem.c.restaurant_id
+                ).filter(MenuItem.c.name.like('%veg%'))
+
+                ubereats_veg=pd.read_sql(query.statement,query.session.bind)
+                ubereats_veg['latitude'] = ubereats_veg['latitude'].astype('float64')
+                ubereats_veg['longitude'] = ubereats_veg['longitude'].astype('float64')
+                ubereats_veg['source']='ubereats'
+
+                return ubereats_veg
+
+            case 'deliveroo':
+                MenuItem=tables['menu_items']
+                query = session.query(
+                distinct(Restaurant.name).label('Restaurant_Name'),
+                Restaurant.latitude,
+                Restaurant.longitude,
+                ).join(MenuItem, Restaurant.id == MenuItem.restaurant_id
+                ).filter(MenuItem.name.like('%veg%'))
+
+                deliveroo_veg=pd.read_sql(query.statement,query.session.bind)
+                deliveroo_veg['latitude']= deliveroo_veg['latitude'].astype('float64')
+                deliveroo_veg['longitude']= deliveroo_veg['longitude'].astype('float64')
+                deliveroo_veg['source']='deliveroo'
+
+                return deliveroo_veg
+
+
+
+
+
+
+
 
 
 

@@ -5,6 +5,7 @@ import contextily as ctx
 import numpy as np
 import plotly.express as px
 import os
+import plotly.graph_objects as go
 
 
 
@@ -205,6 +206,7 @@ class MapMaker:
             ax.set_title(f"Distribution of Restaurants for {platform.capitalize()}", fontsize=16)
             ax.set_axis_off()
             plt.legend(loc='upper right')
+            plt.show()
 
             # Save the map as a .jpg file
             output_file = f"{output_directory}{platform}_distribution.jpg"
@@ -255,6 +257,13 @@ class PlotMaker():
         fig.update_traces(showlegend=False)
         fig.update_layout( xaxis={'categoryorder':'total descending'},title_x=0.5)
         fig.show()
+
+    def plot_veg_restaurants(self):
+        df=self.df
+        fig = px.scatter_map(df, lat="latitude", lon="longitude",size_max=0.2,color="source",zoom=8, color_discrete_map={"ubereats": "navy", "deliveroo": "maroon","takeaway":"lightgreen"})
+        fig.update_traces(marker=dict(opacity=0.5))
+        fig.show()
+
 
     def price_distribution(self):
         
