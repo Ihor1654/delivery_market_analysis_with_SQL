@@ -2,7 +2,8 @@
 ## &#x1F4DC; Description
 Hi! This is a project me and my team made in relation to querying! Hereby we were required to answer 5 questions accompanied with visualization. 
 We took a modular approach using the sqlalchemy library in python.
-![delivery driver](https://github.com/Kevin-Van-Hoorebeek/delivery-market-analysis/assets/deliverydude.gif)
+
+![delivery driver](https://cdn.dribbble.com/users/1520198/screenshots/4728543/media/72ec320e7a1ebd2677406cc46bd1d7fd.gif)
 
 ## :factory:How does it work?
 So essentially we divided up the construction into several python files. a file to handle the databases, a file to handle querying, a file to handle the plotting of the data and finally a file that gives out the answer along with a main file that put's it all together. 
@@ -17,8 +18,8 @@ We used sqlalchemy in python to do the querying. Afterwards we manipulated the d
 * Plotly
 
 ### Example outputs
-!vizualizations/deliveroo_distribution.jpg
-!vizualizations/deliveroo_kapsalon_map.jpg
+![Deliveroo Distribution](visualizations/deliveroo_distribution.jpg)
+![Deliveroo Kapsalon Map](visualizations/deliveroo_kapsalon_map.jpg)
 
 ## Repo Structure
 ```plaintext 
