@@ -13,7 +13,7 @@ These are the questions we set out to answer :
 ![delivery driver](https://cdn.dribbble.com/users/1520198/screenshots/4728543/media/72ec320e7a1ebd2677406cc46bd1d7fd.gif)
 
 ## :factory:How does it work?
-So essentially we divided up the construction into several python files. a file to handle the databases, a file to handle querying, a file to handle the plotting of the data and finally a file that gives out the answer along with a main file that put's it all together. 
+So essentially we divided up the construction into several python files. dbhandler.py to handle the databases and querying, plotmaker.py to handle the plotting of the data and finally answer.py that gives out the answer along with a main file that put's it all together. 
 
 For question involving rating specifically, we used a weighted scoring system to find the top category/restaurant which take the rating and the number of ratings into consideration. The formula: score = rating x 0.3 + number_of_ratings x 0.7.
 
@@ -49,14 +49,12 @@ delivery-market-analysis/
 │       └── takeaway.db
 │       └── deliveroo.db
 │
-├── assets/
 ├── visualizations/
 │ 
 ├── utils/
 │     └── answers.py
 │     └── dbhandler.py
-│     └── plotmaker.py
-│     └── querybuilder.py
+│     └── plotmaker.py    
 │ 
 ├── notebooks/
 ├── requirements.txt                                            
