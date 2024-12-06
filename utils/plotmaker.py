@@ -206,6 +206,7 @@ class MapMaker:
             ax.set_title(f"Distribution of Restaurants for {platform.capitalize()}", fontsize=16)
             ax.set_axis_off()
             plt.legend(loc='upper right')
+            plt.show()
 
             # Save the map as a .jpg file
             output_file = f"{output_directory}{platform}_distribution.jpg"
